@@ -18,7 +18,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.generation.blogpessoal.model.Postagem;
+import com.generation.blogpessoal.model.Tema;
 import com.generation.blogpessoal.repository.PostagemRepository;
+import com.generation.blogpessoal.repository.TemaRepository;
 
 @RestController
 @RequestMapping("/postagem")
@@ -26,6 +28,9 @@ public class PostagemController {
 	
 	@Autowired
 	PostagemRepository postagemRepository;
+	
+	@Autowired
+	TemaRepository temaRepository;
 
 	@GetMapping
 	public ResponseEntity<List<Postagem>> getAll(){
@@ -47,15 +52,27 @@ public class PostagemController {
 	
 	@PostMapping
 	public ResponseEntity<Postagem> postPostagem(@Valid @RequestBody Postagem postagem){
-		return ResponseEntity.status(HttpStatus.CREATED)
-				.body(postagemRepository.save(postagem));
+		if(temaRepository.existsById(postagem.getTema().getId())) {
+			return ResponseEntity.status(HttpStatus.CREATED).body(postagemRepository.save(postagem));
+		}
+		
+		return ResponseEntity.badRequest().build();
 	}
 	
-	@PutMapping("/atualiza")
+	@PutMapping
 	public ResponseEntity<Postagem> putPostagem(@Valid @RequestBody Postagem postagem){
-		return postagemRepository.findById(postagem.getId())
-				.map(resp -> ResponseEntity.status(HttpStatus.OK).body(postagemRepository.save(postagem)))
-				.orElse(ResponseEntity.notFound().build());
+		
+		if (postagemRepository.existsById(postagem.getId())){
+			
+			if (temaRepository.existsById(postagem.getTema().getId()))
+				return ResponseEntity.status(HttpStatus.OK)
+						.body(postagemRepository.save(postagem));
+			
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+			
+		}			
+			
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
 	}
 	
 	@DeleteMapping("/delete/{id}")
